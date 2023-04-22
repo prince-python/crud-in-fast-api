@@ -4,8 +4,13 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from passlib.context import CryptContext
 from .models import *
 import typing
+from fastapi_login import LoginManager
+
 
 router = APIRouter()
+SECRET = 'your-secret-key'
+manager = LoginManager(SECRET, token_url='/auth/token')
+
 
 templates = Jinja2Templates(directory="app/templates")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -51,7 +56,6 @@ async def read_item(request: Request, full_name: str = Form(...),
         return templates.TemplateResponse("login.html", {"request": request, })
 
 
-
 @router.get("/table/", response_class=HTMLResponse)
 async def read_item(request: Request):
     persons = await User.all()
@@ -59,3 +63,76 @@ async def read_item(request: Request):
         "request": request,
         "persons": persons
     })
+
+
+@router.get("/login/", response_class=HTMLResponse)
+async def read_item(request: Request):
+    return templates.TemplateResponse("login.html", {
+        "request": request,
+    })
+
+
+@manager.user_loader()
+async def load_user(email: str):
+    user = await User.get(email=email)
+    return user
+
+
+@router.post('/loginuser/', response_class=HTMLResponse)
+async def login(request: Request, Email: str = Form(...), Password: str = Form(...)):
+    user = await User.get(email=email)
+
+    def verify_password(plain_password, hashed_password):
+        return pwd_context.verify(plain_password, hashed_password)
+    if email != user.email:
+        return RedirectResponse('/login/', status_code=status.HTTP_302_FOUND)
+    elif verify_password(Password, user.password):
+        return RedirectResponse('/login/', status_code=status.HTTP_302_FOUND)
+    else:
+        persons = await User.all()
+        return templates.TemplateResponse("table.html", {
+            "request": request,
+            "persons": persons
+        })
+
+
+@router.post("/delete/", response_class=HTMLResponse)
+async def delete(request: Request, id: int = Form(...)):
+    pk = int(id)
+    user_obj = await User.get(id=pk).delete()
+    persons = await User.all()
+    return templates.TemplateResponse("table.html", {
+        "request": request,
+        "persons": persons
+    })
+
+
+@router.get("/login/", response_class=HTMLResponse)
+async def read_item(request: Request):
+    return templates.TemplateResponse("update.html", {
+        "request": request,
+        "persons": persons
+    })
+
+
+@router.get("/update/{id}", response_class=HTMLResponse)
+async def read_item(request: Request, id: int):
+    person = await User.get(id=id)
+    return templates.TemplateResponse("update.html", {
+        "request": request,
+        "person": person
+    })
+
+
+@router.post("/update_detials/")
+async def update_detials(request: Request, id: int= Form(...),
+                 Name: str = Form(...),
+                 Email: str = Form(...),
+                 Phone: str = Form(...),
+                 ):
+    person = await User.get(id=id)
+    await person.filter(id=id).update(email=Email,
+                                      name=Name,
+                                      phone=Phone
+                                      )
+    return RedirectResponse('/table/', status_code=status.HTTP_302_FOUND)

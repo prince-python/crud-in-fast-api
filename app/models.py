@@ -7,6 +7,5 @@ class User(Model):
     name=fields.CharField(80)
     phone=fields.CharField(10)
     password=fields.CharField(250)
-
-
+    
 Tortoise.init_models(['app.models'],'models')
